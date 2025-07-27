@@ -2,8 +2,10 @@ services:
   - type: web
     name: updates-admin
     env: static
-    buildCommand: npm install && npm run build
+    buildCommand: ./build.sh
     staticPublishPath: ./dist
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: false
