@@ -1,6 +1,7 @@
 [build]
   publish = "dist"
-  command = "npm run build"
+  command = "npm ci --include=dev && npx vite build"
+  environment = { NODE_VERSION = "20", NPM_CONFIG_PRODUCTION = "false" }
 
 [[redirects]]
   from = "/*"
