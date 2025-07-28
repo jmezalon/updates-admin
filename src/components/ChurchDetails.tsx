@@ -121,6 +121,7 @@ export function ChurchDetails({ churchId, onBack }: ChurchDetailsProps) {
     loadEvents();
     loadAnnouncements();
     loadDonations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [churchId]);
 
   const loadChurchDetails = async () => {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BASE_URL } from '../constants/config';
 import { 
   Box, 
   Container, 
@@ -36,7 +37,7 @@ export function ChurchEnrollment() {
       const authToken = localStorage.getItem('authToken');
       
       // Submit church enrollment using new API endpoint
-      const response = await fetch('${BASE_URL}/enrollment/submit-church', {
+      const response = await fetch(`${BASE_URL}/enrollment/submit-church`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

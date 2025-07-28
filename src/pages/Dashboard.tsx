@@ -37,6 +37,7 @@ export function Dashboard() {
     if (user?.churchAssignments?.[0]?.church_id) {
       loadStats();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const loadStats = async () => {
