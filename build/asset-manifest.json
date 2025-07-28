@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.js": "/static/js/main.598224b3.js",
+    "static/media/church-page1.png": "/static/media/church-page1.fde66eafa62a92872fca.png",
+    "static/media/church-page2.png": "/static/media/church-page2.895635fbaac72a137858.png",
+    "static/media/admin-welcome.png": "/static/media/admin-welcome.dbd39627023c62d15f12.png",
+    "index.html": "/index.html",
+    "main.598224b3.js.map": "/static/js/main.598224b3.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.598224b3.js"
+  ]
+}

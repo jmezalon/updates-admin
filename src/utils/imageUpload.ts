@@ -1,3 +1,5 @@
+import { BASE_URL } from '../constants/config';
+
 export interface ImageUploadOptions {
   maxSizeInMB?: number;
   acceptedTypes?: string[];
@@ -35,8 +37,6 @@ export const validateImageFile = (
 
   return { isValid: true };
 };
-
-import { BASE_URL } from '../constants/config';
 
 /**
  * Uploads an image file to the server
