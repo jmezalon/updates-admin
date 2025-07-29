@@ -42,7 +42,7 @@ export function Footer() {
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, justifyContent: { xs: 'center', md: 'flex-end' } }}>
               <Link
-                href="#"
+                href="mailto:max.mezalon@gmail.com"
                 variant="body2"
                 sx={{
                   color: 'text.secondary',
@@ -56,7 +56,7 @@ export function Footer() {
                 Support
               </Link>
               <Link
-                href="#"
+                href="https://updates-backend-api-beebc8cc747c.herokuapp.com/privacy-policy"
                 variant="body2"
                 sx={{
                   color: 'text.secondary',
@@ -70,8 +70,10 @@ export function Footer() {
                 Privacy
               </Link>
               <Link
-                href="#"
+                href="/terms.html"
                 variant="body2"
+                target="_blank"
+                rel="noopener noreferrer"
                 sx={{
                   color: 'text.secondary',
                   textDecoration: 'none',
