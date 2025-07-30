@@ -164,7 +164,7 @@ export function Dashboard() {
   
   // Handle enrollment status for church admins
   if (user?.role === 'church_admin') {
-    const enrollmentStatus = user?.enrollment_status || 'none';
+    const enrollmentStatus = user?.enrollment_status;
     const hasChurchAssignments = user?.churchAssignments && user.churchAssignments.length > 0;
     
     // If user has submitted enrollment but not yet assigned, show pending message
@@ -201,8 +201,9 @@ export function Dashboard() {
       );
     }
     
-    // If user has no church assignments, show enrollment form (unless already pending)
-    if (!hasChurchAssignments) {
+    // If user has no church assignments, show enrollment form
+    // This handles new users with enrollment_status 'none' or undefined/null
+    if (!hasChurchAssignments && (enrollmentStatus === 'none' || !enrollmentStatus)) {
       return <ChurchEnrollment />;
     }
   }
