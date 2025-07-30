@@ -99,13 +99,20 @@ export function EventCard({ event, onUpdate }: EventCardProps) {
     setUpdating(true);
     clearMessages();
     try {
+      // Prepare submission data with proper datetime formatting
+      const submissionData = {
+        ...editForm,
+        start_datetime: formatDateTimeForBackend(editForm.start_datetime),
+        end_datetime: formatDateTimeForBackend(editForm.end_datetime)
+      };
+
       const response = await fetch(`${BASE_URL}/churches/${event.church_id}/events/${event.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify(submissionData)
       });
 
       if (response.ok) {
@@ -145,33 +152,81 @@ export function EventCard({ event, onUpdate }: EventCardProps) {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return '';
+    try {
+      // Since we store local time as UTC, we need to parse it as UTC and display as local
+      // Extract the date components from the UTC string without timezone conversion
+      const utcDate = new Date(dateString);
+      
+      // Get UTC components (which represent the user's intended local time)
+      const year = utcDate.getUTCFullYear();
+      const month = utcDate.getUTCMonth();
+      const day = utcDate.getUTCDate();
+      const hours = utcDate.getUTCHours();
+      const minutes = utcDate.getUTCMinutes();
+      
+      // Create a new date using these components as local time
+      const localDate = new Date(year, month, day, hours, minutes);
+      
+      return localDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.warn('Invalid date format:', dateString);
+      return dateString;
+    }
   };
 
   const formatDateTimeForInput = (dateString: string) => {
     if (!dateString) return '';
     try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return '';
+      // Since we store local time as UTC, extract UTC components to display as local
+      const utcDate = new Date(dateString);
+      if (isNaN(utcDate.getTime())) return '';
       
-      // Format as local datetime without timezone conversion
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
+      // Get UTC components (which represent the user's intended local time)
+      const year = utcDate.getUTCFullYear();
+      const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(utcDate.getUTCDate()).padStart(2, '0');
+      const hours = String(utcDate.getUTCHours()).padStart(2, '0');
+      const minutes = String(utcDate.getUTCMinutes()).padStart(2, '0');
       
       return `${year}-${month}-${day}T${hours}:${minutes}`;
     } catch (error) {
       console.warn('Invalid date format:', dateString);
       return '';
+    }
+  };
+
+  // Convert datetime-local string to ISO string preserving local timezone
+  const formatDateTimeForBackend = (dateTimeString: string) => {
+    if (!dateTimeString) return '';
+    try {
+      // datetime-local format: "2025-07-30T14:00"
+      // Create a Date object from the local datetime string
+      const localDate = new Date(dateTimeString);
+      
+      // The issue is that toISOString() converts to UTC, shifting the time
+      // Instead, we want to preserve the local time as entered by the user
+      // So we'll create an ISO string that represents the local time as UTC
+      const year = localDate.getFullYear();
+      const month = String(localDate.getMonth() + 1).padStart(2, '0');
+      const day = String(localDate.getDate()).padStart(2, '0');
+      const hours = String(localDate.getHours()).padStart(2, '0');
+      const minutes = String(localDate.getMinutes()).padStart(2, '0');
+      const seconds = String(localDate.getSeconds()).padStart(2, '0');
+      
+      // Return as ISO string but treat the local time as if it were UTC
+      // This preserves the time the user entered
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
+    } catch (error) {
+      console.warn('DateTime conversion error:', error, dateTimeString);
+      return dateTimeString; // Return original if conversion fails
     }
   };
 

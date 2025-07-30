@@ -88,18 +88,56 @@ export function AnnouncementCard({ announcement, authToken, onUpdate, onDelete }
     }
   };
 
-  const formatDateTimeForInput = (dateString: string) => {
+  const formatTimeForDisplay = (timeString: string) => {
+    if (!timeString) return '';
     try {
-      const date = new Date(dateString);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
+      // If it's already in a good format (like "8:00 AM"), return as is
+      if (timeString.match(/^\d{1,2}:\d{2}\s?(AM|PM)$/i)) {
+        return timeString;
+      }
       
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
+      // If it's an ISO datetime string, convert to 12-hour format
+      const date = new Date(timeString);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        });
+      }
+      
+      // Return as-is if we can't parse it
+      return timeString;
     } catch (error) {
-      return '';
+      console.warn('Invalid time format:', timeString);
+      return timeString;
+    }
+  };
+
+  const formatTimeForBackend = (timeString: string, baseDate?: string) => {
+    if (!timeString) return '';
+    try {
+      // If it's already an ISO string, return as-is
+      if (timeString.includes('T') && timeString.includes('Z')) {
+        return timeString;
+      }
+      
+      // Use the posted_at date as the base date, or current date if not available
+      const baseDateStr = baseDate || announcement.posted_at || new Date().toISOString().split('T')[0];
+      const baseDateTime = baseDateStr.includes('T') ? baseDateStr.split('T')[0] : baseDateStr;
+      
+      // Convert time string (e.g., "7:00 PM") to 24-hour format
+      const timeDate = new Date(`${baseDateTime} ${timeString}`);
+      
+      if (isNaN(timeDate.getTime())) {
+        console.warn('Invalid time format:', timeString);
+        return timeString; // Return original if conversion fails
+      }
+      
+      return timeDate.toISOString();
+    } catch (error) {
+      console.warn('Time conversion error:', error, timeString);
+      return timeString; // Return original if conversion fails
     }
   };
 
@@ -151,6 +189,12 @@ export function AnnouncementCard({ announcement, authToken, onUpdate, onDelete }
     setLoading(true);
     setError('');
 
+    const submissionData = {
+      ...editForm,
+      start_time: formatTimeForBackend(editForm.start_time, new Date().toISOString().split('T')[0]),
+      end_time: formatTimeForBackend(editForm.end_time, new Date().toISOString().split('T')[0]),
+    };
+
     try {
       const response = await fetch(`${BASE_URL}/announcements/${announcement.id}`, {
         method: 'PUT',
@@ -158,7 +202,7 @@ export function AnnouncementCard({ announcement, authToken, onUpdate, onDelete }
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify(submissionData)
       });
 
       if (response.ok) {
@@ -283,18 +327,24 @@ export function AnnouncementCard({ announcement, authToken, onUpdate, onDelete }
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 label="Start Time"
-                type="datetime-local"
-                value={editForm.start_time ? formatDateTimeForInput(editForm.start_time) : ''}
+                value={formatTimeForDisplay(editForm.start_time)}
                 onChange={(e) => setEditForm(prev => ({ ...prev, start_time: e.target.value }))}
-                InputLabelProps={{ shrink: true }}
+                placeholder="e.g., 8:00 AM"
+                helperText="Enter time in 12-hour format (e.g., 8:00 AM, 12:30 PM)"
+                slotProps={{
+                  inputLabel: { shrink: true }
+                }}
                 fullWidth
               />
               <TextField
                 label="End Time"
-                type="datetime-local"
-                value={editForm.end_time ? formatDateTimeForInput(editForm.end_time) : ''}
+                value={formatTimeForDisplay(editForm.end_time)}
                 onChange={(e) => setEditForm(prev => ({ ...prev, end_time: e.target.value }))}
-                InputLabelProps={{ shrink: true }}
+                placeholder="e.g., 10:00 AM"
+                helperText="Enter time in 12-hour format (e.g., 8:00 AM, 12:30 PM)"
+                slotProps={{
+                  inputLabel: { shrink: true }
+                }}
                 fullWidth
               />
             </Box>
@@ -447,12 +497,12 @@ export function AnnouncementCard({ announcement, authToken, onUpdate, onDelete }
             <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
               {announcement.start_time && (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  <strong>Start:</strong> {formatDateTime(announcement.start_time)}
+                  <strong>Start:</strong> {formatTimeForDisplay(announcement.start_time)}
                 </Typography>
               )}
               {announcement.end_time && (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  <strong>End:</strong> {formatDateTime(announcement.end_time)}
+                  <strong>End:</strong> {formatTimeForDisplay(announcement.end_time)}
                 </Typography>
               )}
             </Box>

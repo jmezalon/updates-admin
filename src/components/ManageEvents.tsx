@@ -65,17 +65,76 @@ const initialFormData: EventFormData = {
 
 export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
   const { user } = useAuth();
-  const [formData, setFormData] = useState<EventFormData>(initialFormData);
+  
+  // Format local date for datetime-local input (avoids UTC conversion issues)
+  const formatLocalDateTimeForInput = (date: Date) => {
+    if (!date || isNaN(date.getTime())) return '';
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // Convert datetime-local string to ISO string preserving local timezone
+  const formatDateTimeForBackend = (dateTimeString: string) => {
+    if (!dateTimeString) return '';
+    try {
+      // datetime-local format: "2025-07-30T14:00"
+      // Create a Date object from the local datetime string
+      const localDate = new Date(dateTimeString);
+      
+      // The issue is that toISOString() converts to UTC, shifting the time
+      // Instead, we want to preserve the local time as entered by the user
+      // So we'll create an ISO string that represents the local time as UTC
+      const year = localDate.getFullYear();
+      const month = String(localDate.getMonth() + 1).padStart(2, '0');
+      const day = String(localDate.getDate()).padStart(2, '0');
+      const hours = String(localDate.getHours()).padStart(2, '0');
+      const minutes = String(localDate.getMinutes()).padStart(2, '0');
+      const seconds = String(localDate.getSeconds()).padStart(2, '0');
+      
+      // Return as ISO string but treat the local time as if it were UTC
+      // This preserves the time the user entered
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
+    } catch (error) {
+      console.warn('DateTime conversion error:', error, dateTimeString);
+      return dateTimeString; // Return original if conversion fails
+    }
+  };
+
+  const [formData, setFormData] = useState<EventFormData>({
+    ...initialFormData,
+    start_datetime: formatLocalDateTimeForInput(new Date()),
+    end_datetime: ''
+  });
   const [createAnother, setCreateAnother] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const authToken = localStorage.getItem('authToken');
   
   // Use shared image upload hook
   const imageUpload = useImageUpload(authToken || '');
   const churchId = user?.churchAssignments?.[0]?.church_id;
+
+
+
+  // Clear field-specific error when user starts typing
+  const clearFieldError = (fieldName: string) => {
+    if (fieldErrors[fieldName]) {
+      setFieldErrors(prev => {
+        const updated = { ...prev };
+        delete updated[fieldName];
+        return updated;
+      });
+    }
+  };
 
   const handleInputChange = (field: keyof EventFormData) => (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -86,69 +145,95 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
     }));
     // Clear errors when user starts typing
     if (error) setError('');
+    clearFieldError(field);
   };
 
+  // Client-side validation
   const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
     if (!formData.title.trim()) {
-      setError('Event title is required');
-      return false;
+      errors.title = 'Event title is required';
     }
+    
     if (!formData.description.trim()) {
-      setError('Event description is required');
-      return false;
+      errors.description = 'Event description is required';
     }
+    
     if (!formData.image_url.trim()) {
-      setError('Event image is required');
-      return false;
+      errors.image_url = 'Event image is required';
     }
+    
     if (!formData.location.trim()) {
-      setError('Event location is required');
-      return false;
+      errors.location = 'Event location is required';
     }
+    
     if (!formData.start_datetime) {
-      setError('Start date and time is required');
-      return false;
+      errors.start_datetime = 'Start date and time is required';
     }
+    
     if (!formData.end_datetime) {
-      setError('End date and time is required');
-      return false;
+      errors.end_datetime = 'End date and time is required';
     }
     
     // Validate that end time is after start time
-    const startDate = new Date(formData.start_datetime);
-    const endDate = new Date(formData.end_datetime);
-    if (endDate <= startDate) {
-      setError('End date and time must be after start date and time');
-      return false;
+    if (formData.start_datetime && formData.end_datetime) {
+      const startDate = new Date(formData.start_datetime);
+      const endDate = new Date(formData.end_datetime);
+      if (endDate <= startDate) {
+        errors.end_datetime = 'End date and time must be after start date and time';
+      }
     }
-
-    return true;
+    
+    if (formData.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contact_email)) {
+      errors.contact_email = 'Please enter a valid email address';
+    }
+    
+    if (formData.price && (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) < 0)) {
+      errors.price = 'Price must be a valid number greater than or equal to 0';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    // Clear previous errors
+    setError('');
+    setSuccess('');
+    setFieldErrors({});
+    imageUpload.clearMessages();
+
+    // Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
+    
     if (!churchId) {
       setError('No church assignment found. Please contact your administrator.');
       return;
     }
 
     setLoading(true);
-    setError('');
-    setSuccess('');
 
     try {
+      // Prepare submission data with proper datetime formatting
+      const submissionData = {
+        ...formData,
+        start_datetime: formatDateTimeForBackend(formData.start_datetime),
+        end_datetime: formatDateTimeForBackend(formData.end_datetime),
+        price: formData.price ? parseFloat(formData.price) : 0
+      };
+
       const response = await fetch(`${BASE_URL}/churches/${churchId}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify({
-          ...formData,
-          price: formData.price ? parseFloat(formData.price) : 0
-        })
+        body: JSON.stringify(submissionData)
       });
 
       if (response.ok) {
@@ -157,26 +242,51 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
         
         if (createAnother) {
           // Reset form for another event
-          setFormData(initialFormData);
-          setCreateAnother(false);
-          
-          // Clear success message after 3 seconds
+          setFormData({
+            ...initialFormData,
+            start_datetime: formatLocalDateTimeForInput(new Date()),
+            end_datetime: ''
+          });
+          imageUpload.clearMessages();
           setTimeout(() => setSuccess(''), 3000);
         } else {
-          // Navigate to church page to view events
+          // Navigate back after showing success message
           setTimeout(() => {
             onEventCreated(true);
-          }, 1500);
+            onBack();
+          }, 2000);
         }
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to create event');
+        
+        // Handle validation errors from backend
+        if (response.status === 400 && errorData.details) {
+          // If backend provides field-specific errors
+          const backendErrors: Record<string, string> = {};
+          if (Array.isArray(errorData.details)) {
+            errorData.details.forEach((detail: any) => {
+              if (detail.field && detail.message) {
+                backendErrors[detail.field] = detail.message;
+              }
+            });
+          }
+          setFieldErrors(backendErrors);
+          setError('Please fix the validation errors below.');
+        } else {
+          // Generic error handling
+          setError(
+            errorData.error || 
+            errorData.message || 
+            'Failed to create event. Please check your input and try again.'
+          );
+        }
       }
     } catch (err) {
-      setError('Network error while creating event. Please try again.');
+      setError('Network error. Please check your connection and try again.');
+      console.error('Error creating event:', err);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,10 +309,15 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
   };
 
   const handleCancel = () => {
-    setFormData(initialFormData);
-    setCreateAnother(false);
+    setFormData({
+      ...initialFormData,
+      start_datetime: formatLocalDateTimeForInput(new Date()),
+      end_datetime: ''
+    });
     setError('');
     setSuccess('');
+    setFieldErrors({});
+    imageUpload.clearMessages();
   };
 
   return (
@@ -253,6 +368,8 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                       onChange={handleInputChange('title')}
                       required
                       placeholder="e.g., Sunday Service, Bible Study, Community Outreach"
+                      helperText={fieldErrors.title || "Give your event a clear, descriptive title"}
+                      error={!!fieldErrors.title}
                     />
                     <TextField
                       fullWidth
@@ -263,6 +380,8 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                       multiline
                       rows={4}
                       placeholder="Describe your event, what to expect, who should attend..."
+                      helperText={fieldErrors.description || "Provide details about your event"}
+                      error={!!fieldErrors.description}
                     />
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <TextField
@@ -272,7 +391,8 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                         onChange={handleInputChange('image_url')}
                         required
                         placeholder="https://example.com/event-image.jpg"
-                        helperText="Enter an image URL or upload an image below"
+                        helperText={fieldErrors.image_url || "Enter an image URL or upload an image below"}
+                        error={!!fieldErrors.image_url}
                       />
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -340,7 +460,11 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                       value={formData.start_datetime}
                       onChange={handleInputChange('start_datetime')}
                       required
-                      InputLabelProps={{ shrink: true }}
+                      slotProps={{
+                        inputLabel: { shrink: true }
+                      }}
+                      helperText={fieldErrors.start_datetime || "When the event starts (local time)"}
+                      error={!!fieldErrors.start_datetime}
                     />
                     <TextField
                       fullWidth
@@ -349,7 +473,11 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                       value={formData.end_datetime}
                       onChange={handleInputChange('end_datetime')}
                       required
-                      InputLabelProps={{ shrink: true }}
+                      slotProps={{
+                        inputLabel: { shrink: true }
+                      }}
+                      helperText={fieldErrors.end_datetime || "When the event ends (local time)"}
+                      error={!!fieldErrors.end_datetime}
                     />
                   </Box>
                 </Box>
@@ -370,6 +498,8 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                       onChange={handleInputChange('location')}
                       required
                       placeholder="e.g., Main Sanctuary, Fellowship Hall, 123 Church St"
+                      helperText={fieldErrors.location || "Where the event will take place"}
+                      error={!!fieldErrors.location}
                     />
                     <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
                       <TextField
@@ -379,8 +509,12 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                         value={formData.contact_email}
                         onChange={handleInputChange('contact_email')}
                         placeholder="contact@church.com"
-                        InputProps={{
-                          startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                        helperText={fieldErrors.contact_email || "Optional contact email for the event"}
+                        error={!!fieldErrors.contact_email}
+                        slotProps={{
+                          input: {
+                            startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                          }
                         }}
                       />
                       <TextField
@@ -389,8 +523,12 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                         value={formData.contact_phone}
                         onChange={handleInputChange('contact_phone')}
                         placeholder="(555) 123-4567"
-                        InputProps={{
-                          startAdornment: <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                        helperText={fieldErrors.contact_phone || "Optional contact phone for the event"}
+                        error={!!fieldErrors.contact_phone}
+                        slotProps={{
+                          input: {
+                            startAdornment: <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                          }
                         }}
                       />
                     </Box>
@@ -412,9 +550,12 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                       value={formData.price}
                       onChange={handleInputChange('price')}
                       placeholder="0.00"
-                      helperText="Enter 0 for free events"
-                      InputProps={{
-                        startAdornment: <MoneyIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                      helperText={fieldErrors.price || "Enter 0 for free events"}
+                      error={!!fieldErrors.price}
+                      slotProps={{
+                        input: {
+                          startAdornment: <MoneyIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                        }
                       }}
                     />
                     <TextField
@@ -423,8 +564,12 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
                       value={formData.website}
                       onChange={handleInputChange('website')}
                       placeholder="https://church.com/event-details"
-                      InputProps={{
-                        startAdornment: <WebsiteIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                      helperText={fieldErrors.website || "Optional website link for more event details"}
+                      error={!!fieldErrors.website}
+                      slotProps={{
+                        input: {
+                          startAdornment: <WebsiteIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                        }
                       }}
                     />
                   </Box>

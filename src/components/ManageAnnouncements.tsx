@@ -116,13 +116,57 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
         return;
       }
 
+      // Convert time strings to ISO datetime strings for backend
+      const formatTimeForBackend = (timeString: string, baseDate?: string) => {
+        if (!timeString) return '';
+        try {
+          // Use the posted_at date as the base date, or current date if not available
+          const baseDateStr = baseDate || formData.posted_at || new Date().toISOString().split('T')[0];
+          const baseDateTime = baseDateStr.includes('T') ? baseDateStr.split('T')[0] : baseDateStr;
+          
+          // Convert time string (e.g., "7:00 PM") to 24-hour format
+          const timeDate = new Date(`${baseDateTime} ${timeString}`);
+          
+          if (isNaN(timeDate.getTime())) {
+            console.warn('Invalid time format:', timeString);
+            return timeString; // Return original if conversion fails
+          }
+          
+          return timeDate.toISOString();
+        } catch (error) {
+          console.warn('Time conversion error:', error, timeString);
+          return timeString; // Return original if conversion fails
+        }
+      };
+
+      // Convert posted_at to ISO string if it's in datetime-local format
+      const formatDateTimeForBackend = (dateTimeString: string) => {
+        if (!dateTimeString) return '';
+        try {
+          const date = new Date(dateTimeString);
+          return date.toISOString();
+        } catch (error) {
+          console.warn('DateTime conversion error:', error, dateTimeString);
+          return dateTimeString;
+        }
+      };
+
+      // Prepare data with properly formatted datetime fields
+      const submissionData = {
+        ...formData,
+        church_id: churchId,
+        start_time: formatTimeForBackend(formData.start_time, formData.posted_at),
+        end_time: formatTimeForBackend(formData.end_time, formData.posted_at),
+        posted_at: formatDateTimeForBackend(formData.posted_at)
+      };
+
       const response = await fetch(`${BASE_URL}/announcements`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify({ ...formData, church_id: churchId })
+        body: JSON.stringify(submissionData)
       });
 
       if (response.ok) {
