@@ -298,13 +298,16 @@ export function ChurchDetails({ churchId, onBack }: ChurchDetailsProps) {
     setError('');
     
     try {
+      // Filter out any fields that might not exist in the database schema or are managed by the backend
+      const { follower_count, created_at, updated_at, ...churchUpdateData } = formData as any;
+      
       const response = await fetch(`${BASE_URL}/churches/${churchId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(churchUpdateData)
       });
 
       if (response.ok) {
