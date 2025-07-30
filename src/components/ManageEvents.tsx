@@ -79,27 +79,24 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  // Convert datetime-local string to ISO string preserving local timezone
+  // Convert datetime-local string to proper UTC ISO string for backend storage
   const formatDateTimeForBackend = (dateTimeString: string) => {
     if (!dateTimeString) return '';
     try {
       // datetime-local format: "2025-07-30T14:00"
       // Create a Date object from the local datetime string
+      // The browser will interpret this as local time
       const localDate = new Date(dateTimeString);
       
-      // The issue is that toISOString() converts to UTC, shifting the time
-      // Instead, we want to preserve the local time as entered by the user
-      // So we'll create an ISO string that represents the local time as UTC
-      const year = localDate.getFullYear();
-      const month = String(localDate.getMonth() + 1).padStart(2, '0');
-      const day = String(localDate.getDate()).padStart(2, '0');
-      const hours = String(localDate.getHours()).padStart(2, '0');
-      const minutes = String(localDate.getMinutes()).padStart(2, '0');
-      const seconds = String(localDate.getSeconds()).padStart(2, '0');
+      if (isNaN(localDate.getTime())) {
+        console.warn('Invalid date string:', dateTimeString);
+        return '';
+      }
       
-      // Return as ISO string but treat the local time as if it were UTC
-      // This preserves the time the user entered
-      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
+      // Convert to proper UTC ISO string
+      // This will automatically handle the timezone conversion
+      // e.g., 10:00 PM Eastern becomes 2:00 AM UTC (next day)
+      return localDate.toISOString();
     } catch (error) {
       console.warn('DateTime conversion error:', error, dateTimeString);
       return dateTimeString; // Return original if conversion fails
