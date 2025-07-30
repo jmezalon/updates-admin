@@ -42,6 +42,19 @@ interface ManageAnnouncementsProps {
 }
 
 export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) {
+  // Format local date for datetime-local input (avoids UTC conversion issues)
+  const formatLocalDateTimeForInput = (date: Date) => {
+    if (!date || isNaN(date.getTime())) return '';
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -52,7 +65,7 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
     end_time: '',
     recurrence_rule: '',
     is_special: false,
-    posted_at: new Date().toISOString().slice(0, 16),
+    posted_at: formatLocalDateTimeForInput(new Date()),
     day: 0 // Default to Sunday
   });
   
@@ -60,6 +73,7 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   
   const authToken = localStorage.getItem('authToken');
   
@@ -80,16 +94,25 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    
+    // Clear previous errors
     setSubmitError('');
     setSubmitSuccess('');
+    setFieldErrors({});
     clearMessages();
+
+    // Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
+
+    setSubmitting(true);
 
     try {
       // Get the user's church assignment
       const churchId = user.churchAssignments?.[0]?.church_id;
       if (!churchId) {
-        setSubmitError('No church assignment found');
+        setSubmitError('No church assignment found. Please contact your administrator.');
         return;
       }
 
@@ -117,7 +140,7 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
             end_time: '',
             recurrence_rule: '',
             is_special: false,
-            posted_at: new Date().toISOString().slice(0, 16),
+            posted_at: formatLocalDateTimeForInput(new Date()),
             day: 0 // Default to Sunday
           });
         } else {
@@ -128,10 +151,31 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
         }
       } else {
         const errorData = await response.json();
-        setSubmitError(errorData.error || 'Failed to create announcement');
+        
+        // Handle validation errors from backend
+        if (response.status === 400 && errorData.details) {
+          // If backend provides field-specific errors
+          const backendErrors: Record<string, string> = {};
+          if (Array.isArray(errorData.details)) {
+            errorData.details.forEach((detail: any) => {
+              if (detail.field && detail.message) {
+                backendErrors[detail.field] = detail.message;
+              }
+            });
+          }
+          setFieldErrors(backendErrors);
+          setSubmitError('Please fix the validation errors below.');
+        } else {
+          // Generic error handling
+          setSubmitError(
+            errorData.error || 
+            errorData.message || 
+            'Failed to create announcement. Please check your input and try again.'
+          );
+        }
       }
     } catch (err) {
-      setSubmitError('Network error. Please try again.');
+      setSubmitError('Network error. Please check your connection and try again.');
       console.error('Error creating announcement:', err);
     } finally {
       setSubmitting(false);
@@ -142,17 +186,40 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return '';
-      
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
+      return formatLocalDateTimeForInput(date);
     } catch (error) {
       return '';
+    }
+  };
+
+  // Client-side validation
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.title.trim()) {
+      errors.title = 'Title is required';
+    }
+    
+    if (!formData.description.trim()) {
+      errors.description = 'Description is required';
+    }
+    
+    if (!formData.posted_at) {
+      errors.posted_at = 'Posted date and time is required';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Clear field error when user starts typing
+  const clearFieldError = (fieldName: string) => {
+    if (fieldErrors[fieldName]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
     }
   };
 
@@ -255,10 +322,16 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
                 {/* Basic Information */}
                 <TextField
                   fullWidth
-                  label="Announcement Title"
+                  label="Title"
                   required
                   value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, title: e.target.value }));
+                    clearFieldError('title');
+                  }}
+                  placeholder="e.g., Sunday Service, Youth Group Meeting"
+                  helperText={fieldErrors.title || "Give your announcement a clear, descriptive title"}
+                  error={!!fieldErrors.title}
                 />
                 
                 <TextField
@@ -267,7 +340,12 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
                   multiline
                   rows={4}
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, description: e.target.value }));
+                    clearFieldError('description');
+                  }}
+                  helperText={fieldErrors.description || "Provide a brief summary of your announcement"}
+                  error={!!fieldErrors.description}
                 />
 
                 {/* Announcement Type and Category */}
@@ -339,8 +417,12 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
                   type="datetime-local"
                   required
                   value={formatDateTimeForInput(formData.posted_at)}
-                  onChange={(e) => setFormData(prev => ({ ...prev, posted_at: e.target.value }))}
-                  helperText="When this announcement should be published"
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, posted_at: e.target.value }));
+                    clearFieldError('posted_at');
+                  }}
+                  helperText={fieldErrors.posted_at || "When this announcement should be published (local time)"}
+                  error={!!fieldErrors.posted_at}
                 />
 
                 <Box sx={{ display: 'flex', gap: 2 }}>
