@@ -201,8 +201,8 @@ export function Dashboard() {
       );
     }
     
-    // If user has no church assignments and no pending enrollment, show enrollment form
-    if (!hasChurchAssignments && enrollmentStatus === 'none') {
+    // If user has no church assignments, show enrollment form (unless already pending)
+    if (!hasChurchAssignments) {
       return <ChurchEnrollment />;
     }
   }
