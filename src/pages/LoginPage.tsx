@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Container, Typography, Button, Card, CardContent, TextField, Alert } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { useAuth } from '../auth/AuthContext';
 
@@ -80,8 +80,7 @@ export function LoginPage() {
               </Button>
             </form>
             
-            {/* TODO: Forgot Password Link - work on this later! */}
-            {/* <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Button
                 component={Link}
                 to="/forgot-password"
@@ -96,7 +95,7 @@ export function LoginPage() {
               >
                 Forgot your password?
               </Button>
-            </Box> */}
+            </Box>
           </CardContent>
         </Card>
       </Container>
