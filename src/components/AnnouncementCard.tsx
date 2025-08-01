@@ -114,33 +114,6 @@ export function AnnouncementCard({ announcement, authToken, onUpdate, onDelete }
     }
   };
 
-  const formatTimeForBackend = (timeString: string, baseDate?: string) => {
-    if (!timeString) return '';
-    try {
-      // If it's already an ISO string, return as-is
-      if (timeString.includes('T') && timeString.includes('Z')) {
-        return timeString;
-      }
-      
-      // Use the posted_at date as the base date, or current date if not available
-      const baseDateStr = baseDate || announcement.posted_at || new Date().toISOString().split('T')[0];
-      const baseDateTime = baseDateStr.includes('T') ? baseDateStr.split('T')[0] : baseDateStr;
-      
-      // Convert time string (e.g., "7:00 PM") to 24-hour format
-      const timeDate = new Date(`${baseDateTime} ${timeString}`);
-      
-      if (isNaN(timeDate.getTime())) {
-        console.warn('Invalid time format:', timeString);
-        return timeString; // Return original if conversion fails
-      }
-      
-      return timeDate.toISOString();
-    } catch (error) {
-      console.warn('Time conversion error:', error, timeString);
-      return timeString; // Return original if conversion fails
-    }
-  };
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'weekly': return 'primary';
@@ -191,8 +164,8 @@ export function AnnouncementCard({ announcement, authToken, onUpdate, onDelete }
 
     const submissionData = {
       ...editForm,
-      start_time: formatTimeForBackend(editForm.start_time, new Date().toISOString().split('T')[0]),
-      end_time: formatTimeForBackend(editForm.end_time, new Date().toISOString().split('T')[0]),
+      start_time: editForm.start_time, // Send time strings directly as entered
+      end_time: editForm.end_time, // Send time strings directly as entered
     };
 
     try {
