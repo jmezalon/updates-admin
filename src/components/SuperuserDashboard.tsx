@@ -378,7 +378,6 @@ export function SuperuserDashboard() {
                     <TableCell>Email</TableCell>
                     <TableCell>Role</TableCell>
                     <TableCell>Church Assignments</TableCell>
-                    <TableCell>Created</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -406,10 +405,11 @@ export function SuperuserDashboard() {
                             />
                           ))
                         ) : (
-                          <Chip label="Unassigned" color="warning" size="small" />
+                          user.role === 'church_admin' ? (
+                            <Chip label="Unassigned" color="warning" size="small" />
+                          ) : null
                         )}
                       </TableCell>
-                      <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                       <TableCell>
                         {user.role !== 'superuser' && (
                           <IconButton 
@@ -437,7 +437,6 @@ export function SuperuserDashboard() {
                     <TableCell>Church Name</TableCell>
                     <TableCell>Senior Pastor</TableCell>
                     <TableCell>Contact Email</TableCell>
-                    <TableCell>Created</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -448,7 +447,6 @@ export function SuperuserDashboard() {
                       <TableCell>{church.name}</TableCell>
                       <TableCell>{church.senior_pastor}</TableCell>
                       <TableCell>{church.contact_email}</TableCell>
-                      <TableCell>{new Date(church.created_at).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <IconButton 
                           color="error" 
@@ -475,7 +473,6 @@ export function SuperuserDashboard() {
                     <TableCell>Admin Name</TableCell>
                     <TableCell>Admin Email</TableCell>
                     <TableCell>Church</TableCell>
-                    <TableCell>Assignment Date</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -485,7 +482,6 @@ export function SuperuserDashboard() {
                         <TableCell>{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{assignment.church_name}</TableCell>
-                        <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))
                   )}
