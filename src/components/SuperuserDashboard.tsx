@@ -148,7 +148,7 @@ export function SuperuserDashboard() {
           'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify({
-          email: newAdminEmail,
+          email: newAdminEmail.toLowerCase(),
           password: newAdminPassword,
           name: newAdminName,
           role: newAdminRole

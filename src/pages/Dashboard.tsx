@@ -28,9 +28,16 @@ export function Dashboard() {
     if (location.pathname === '/profile') {
       setCurrentView('profile');
     } else if (location.pathname === '/dashboard') {
-      setCurrentView('dashboard');
+      const urlParams = new URLSearchParams(location.search);
+      const view = urlParams.get('view');
+      if (view === 'church-details' && user?.churchAssignments?.[0]?.church_id) {
+        setSelectedChurchId(user.churchAssignments[0].church_id);
+        setCurrentView('church-details');
+      } else {
+        setCurrentView('dashboard');
+      }
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.search, user]);
 
   // Load stats data for Quick Overview
   useEffect(() => {
@@ -105,6 +112,9 @@ export function Dashboard() {
 
   // Handle event creation completion
   const handleEventCreated = (shouldShowChurch: boolean) => {
+    // Refresh stats when event is created
+    loadStats();
+    
     if (shouldShowChurch && user?.churchAssignments?.[0]?.church_id) {
       setSelectedChurchId(user.churchAssignments[0].church_id);
       setCurrentView('church-details');
@@ -112,13 +122,35 @@ export function Dashboard() {
       setCurrentView('dashboard');
     }
   };
+
+  // Handle announcement creation completion
+  const handleAnnouncementCreated = () => {
+    // Refresh stats when announcement is created
+    loadStats();
+  };
+
+  // Handle event deletion completion
+  const handleEventDeleted = () => {
+    // Refresh stats when event is deleted
+    loadStats();
+  };
+
+  // Handle announcement deletion completion
+  const handleAnnouncementDeleted = () => {
+    // Refresh stats when announcement is deleted
+    loadStats();
+  };
   
   // Show church details if selected
   if (currentView === 'church-details' && selectedChurchId) {
     return (
       <ChurchDetails 
         churchId={selectedChurchId} 
-        onBack={handleBackToDashboard} 
+        onBack={handleBackToDashboard}
+        onManageEvents={handleManageEvents}
+        onManageAnnouncements={handleManageAnnouncements}
+        onEventDeleted={handleEventDeleted}
+        onAnnouncementDeleted={handleAnnouncementDeleted}
       />
     );
   }
@@ -131,6 +163,13 @@ export function Dashboard() {
         <Box sx={{ pt: 10, width: '100%' }}>
           <ManageEvents 
             onBack={handleBackToDashboard}
+            setCurrentView={(view: string) => {
+              // Type-safe wrapper to handle string to union type conversion
+              const validViews = ['dashboard', 'church-details', 'profile', 'manage-events', 'manage-announcements'] as const;
+              if (validViews.includes(view as any)) {
+                setCurrentView(view as typeof currentView);
+              }
+            }}
             onEventCreated={handleEventCreated}
           />
         </Box>
@@ -147,6 +186,14 @@ export function Dashboard() {
           <ManageAnnouncements 
             user={user!}
             onBack={handleBackToDashboard}
+            setCurrentView={(view: string) => {
+              // Type-safe wrapper to handle string to union type conversion
+              const validViews = ['dashboard', 'church-details', 'profile', 'manage-events', 'manage-announcements'] as const;
+              if (validViews.includes(view as any)) {
+                setCurrentView(view as typeof currentView);
+              }
+            }}
+            onAnnouncementCreated={handleAnnouncementCreated}
           />
         </Box>
       </Box>
@@ -225,7 +272,7 @@ export function Dashboard() {
               cursor: 'pointer',
               textDecoration: 'none',
               '&:hover': {
-                color: 'secondary.main'
+                color: 'primary.dark'
               }
             }}
             onClick={() => handleChurchClick(user?.churchAssignments?.[0]?.church_id || 0)}

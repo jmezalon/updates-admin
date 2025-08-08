@@ -1,5 +1,5 @@
 import { BASE_URL } from '../constants/config';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -34,6 +34,7 @@ import { useImageUpload } from '../hooks/useImageUpload';
 
 interface ManageEventsProps {
   onBack: () => void;
+  setCurrentView: (view: string) => void;
   onEventCreated: (shouldShowChurch: boolean) => void;
 }
 
@@ -63,7 +64,7 @@ const initialFormData: EventFormData = {
   website: ''
 };
 
-export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
+export function ManageEvents({ onBack, setCurrentView, onEventCreated }: ManageEventsProps) {
   const { user } = useAuth();
   
   // Format local date for datetime-local input (avoids UTC conversion issues)
@@ -119,6 +120,40 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
   // Use shared image upload hook
   const imageUpload = useImageUpload(authToken || '');
   const churchId = user?.churchAssignments?.[0]?.church_id;
+
+  // Fetch church details and prefill form
+  useEffect(() => {
+    const fetchChurchDetails = async () => {
+      if (!churchId || !authToken) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${BASE_URL}/churches/${churchId}`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        if (response.ok) {
+          const churchData = await response.json();
+          
+          // Prefill form with church contact information
+          setFormData(prev => ({
+            ...prev,
+            contact_email: churchData.contact_email || '',
+            contact_phone: churchData.contact_phone || '',
+            website: churchData.website || '',
+            location: churchData.address ? 
+              `${churchData.address}${churchData.city ? `, ${churchData.city}` : ''}${churchData.state ? `, ${churchData.state}` : ''}${churchData.zip ? ` ${churchData.zip}` : ''}`.trim() 
+              : ''
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching church details:', err);
+      }
+    };
+
+    fetchChurchDetails();
+  }, [churchId, authToken]);
 
 
 
@@ -237,6 +272,9 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
         await response.json();
         setSuccess(`Event "${formData.title}" created successfully!`);
         
+        // Always notify parent that event was created (for stats update)
+        onEventCreated(false);
+        
         if (createAnother) {
           // Reset form for another event
           setFormData({
@@ -250,7 +288,7 @@ export function ManageEvents({ onBack, onEventCreated }: ManageEventsProps) {
           // Navigate back after showing success message
           setTimeout(() => {
             onEventCreated(true);
-            onBack();
+            setCurrentView('church-details');
           }, 2000);
         }
       } else {

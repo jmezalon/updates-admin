@@ -39,9 +39,11 @@ interface User {
 interface ManageAnnouncementsProps {
   user: User;
   onBack: () => void;
+  setCurrentView: (view: string) => void;
+  onAnnouncementCreated?: () => void;
 }
 
-export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) {
+export function ManageAnnouncements({ user, onBack, setCurrentView, onAnnouncementCreated }: ManageAnnouncementsProps) {
   // Format local date for datetime-local input (avoids UTC conversion issues)
   const formatLocalDateTimeForInput = (date: Date) => {
     if (!date || isNaN(date.getTime())) return '';
@@ -149,6 +151,11 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
       if (response.ok) {
         setSubmitSuccess('Announcement created successfully!');
         
+        // Notify parent component that announcement was created
+        if (onAnnouncementCreated) {
+          onAnnouncementCreated();
+        }
+        
         if (createAnother) {
           // Reset form for another announcement
           setFormData({
@@ -167,7 +174,7 @@ export function ManageAnnouncements({ user, onBack }: ManageAnnouncementsProps) 
         } else {
           // Navigate back to church details after a short delay
           setTimeout(() => {
-            onBack();
+            setCurrentView('church-details');
           }, 2000);
         }
       } else {

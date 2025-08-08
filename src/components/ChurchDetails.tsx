@@ -92,9 +92,13 @@ interface Donation {
 interface ChurchDetailsProps {
   churchId: number;
   onBack: () => void;
+  onManageEvents?: () => void;
+  onManageAnnouncements?: () => void;
+  onEventDeleted?: () => void;
+  onAnnouncementDeleted?: () => void;
 }
 
-export function ChurchDetails({ churchId, onBack }: ChurchDetailsProps) {
+export function ChurchDetails({ churchId, onBack, onManageEvents, onManageAnnouncements, onEventDeleted, onAnnouncementDeleted }: ChurchDetailsProps) {
   const [church, setChurch] = useState<Church | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -163,6 +167,15 @@ export function ChurchDetails({ churchId, onBack }: ChurchDetailsProps) {
     setEventsLoading(false);
   };
 
+  // Handle event deletion
+  const handleEventDelete = (eventId: number) => {
+    setEvents(prev => prev.filter(event => event.id !== eventId));
+    // Notify parent component that event was deleted (for stats update)
+    if (onEventDeleted) {
+      onEventDeleted();
+    }
+  };
+
   const loadAnnouncements = async () => {
     setAnnouncementsLoading(true);
     try {
@@ -211,6 +224,10 @@ export function ChurchDetails({ churchId, onBack }: ChurchDetailsProps) {
 
   const handleAnnouncementDelete = (announcementId: number) => {
     setAnnouncements(prev => prev.filter(announcement => announcement.id !== announcementId));
+    // Notify parent component that announcement was deleted (for stats update)
+    if (onAnnouncementDeleted) {
+      onAnnouncementDeleted();
+    }
   };
 
   const handleDonationDelete = async (donationId: number) => {
@@ -814,7 +831,7 @@ export function ChurchDetails({ churchId, onBack }: ChurchDetailsProps) {
           {/* Events and Announcements Grid Layout */}
           <Box sx={{ 
             display: 'grid', 
-            gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, 
+            gridTemplateColumns: { xs: '1fr', md: '2fr 1.5fr' }, 
             gap: 4, 
             mb: 4 
           }}>
@@ -825,9 +842,28 @@ export function ChurchDetails({ churchId, onBack }: ChurchDetailsProps) {
                   <Typography variant="h5" sx={{ fontWeight: 600, color: 'secondary.main' }}>
                     📅 Events
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {events.length} event{events.length !== 1 ? 's' : ''} created
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {events.length} event{events.length !== 1 ? 's' : ''} created
+                    </Typography>
+                    {onManageEvents && (
+                      <IconButton
+                        onClick={onManageEvents}
+                        sx={{
+                          bgcolor: 'secondary.main',
+                          color: 'white',
+                          width: 32,
+                          height: 32,
+                          '&:hover': {
+                            bgcolor: 'secondary.dark'
+                          }
+                        }}
+                        size="small"
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
                 </Box>
 
                 {eventsLoading ? (
@@ -846,7 +882,7 @@ export function ChurchDetails({ churchId, onBack }: ChurchDetailsProps) {
                 ) : (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {events.map((event) => (
-                      <EventCard key={event.id} event={event} onUpdate={loadEvents} />
+                      <EventCard key={event.id} event={event} onUpdate={loadEvents} onDelete={handleEventDelete} />
                     ))}
                   </Box>
                 )}
@@ -860,9 +896,28 @@ export function ChurchDetails({ churchId, onBack }: ChurchDetailsProps) {
                   <Typography variant="h5" sx={{ fontWeight: 600, color: 'error.main' }}>
                     📢 Announcements
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {announcements.length} announcement{announcements.length !== 1 ? 's' : ''} created
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {announcements.length} announcement{announcements.length !== 1 ? 's' : ''} created
+                    </Typography>
+                    {onManageAnnouncements && (
+                      <IconButton
+                        onClick={onManageAnnouncements}
+                        sx={{
+                          bgcolor: 'error.main',
+                          color: 'white',
+                          width: 32,
+                          height: 32,
+                          '&:hover': {
+                            bgcolor: 'error.dark'
+                          }
+                        }}
+                        size="small"
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
                 </Box>
 
                 {announcementsLoading ? (

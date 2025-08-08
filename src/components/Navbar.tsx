@@ -20,7 +20,7 @@ export function Navbar() {
       <Toolbar>
         <Typography 
           variant="h5" 
-          sx={{ flexGrow: 1, fontWeight: 700, color: 'text.primary', letterSpacing: 2, cursor: 'pointer' }}
+          sx={{ flexGrow: 1, fontWeight: 700, color: 'primary.dark', letterSpacing: 2, cursor: 'pointer', '&:hover': { color: 'black' } }}
           onClick={handleHomeClick}
         >
           Updates
@@ -28,6 +28,22 @@ export function Navbar() {
         {isLoggedIn ? (
           <>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {user?.role !== 'superuser' && (
+                <Button 
+                  color="inherit" 
+                  onClick={() => navigate('/dashboard?view=church-details')} 
+                  sx={{ 
+                    color: 'primary.main', 
+                    fontWeight: 600,
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
+                      color: 'white'
+                    }
+                  }}
+                >
+                  My Church
+                </Button>
+              )}
               <Avatar 
                 sx={{ 
                   width: 40, 
@@ -36,7 +52,8 @@ export function Navbar() {
                   color: 'primary.main',
                   cursor: 'pointer',
                   '&:hover': {
-                    bgcolor: 'primary.dark'
+                    bgcolor: 'primary.dark',
+                    color: 'white'
                   }
                 }}
                 onClick={() => navigate('/profile')}

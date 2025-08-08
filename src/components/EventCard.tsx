@@ -46,9 +46,10 @@ interface Event {
 interface EventCardProps {
   event: Event;
   onUpdate: () => void;
+  onDelete?: (eventId: number) => void;
 }
 
-export function EventCard({ event, onUpdate }: EventCardProps) {
+export function EventCard({ event, onUpdate, onDelete }: EventCardProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -85,6 +86,9 @@ export function EventCard({ event, onUpdate }: EventCardProps) {
 
       if (response.ok) {
         onUpdate(); // Refresh the events list
+        if (onDelete) {
+          onDelete(event.id); // Notify parent about deletion
+        }
         setDeleteDialogOpen(false);
       } else {
         console.error('Failed to delete event');
