@@ -20,7 +20,7 @@ export function Navbar() {
       <Toolbar>
         <Typography 
           variant="h5" 
-          sx={{ flexGrow: 1, fontWeight: 700, color: 'primary.dark', letterSpacing: 2, cursor: 'pointer', '&:hover': { color: 'black' } }}
+          sx={{ flexGrow: 1, fontWeight: 700, color: 'black', letterSpacing: 2, cursor: 'pointer', '&:hover': { color: 'primary.dark' } }}
           onClick={handleHomeClick}
         >
           Updates
@@ -33,11 +33,11 @@ export function Navbar() {
                   color="inherit" 
                   onClick={() => navigate('/dashboard?view=church-details')} 
                   sx={{ 
-                    color: 'primary.main', 
+                    color: 'black', 
                     fontWeight: 600,
                     '&:hover': {
-                      bgcolor: 'primary.dark',
-                      color: 'white'
+                      bgcolor: '#fff',
+                      color: 'primary.dark'
                     }
                   }}
                 >
@@ -48,12 +48,12 @@ export function Navbar() {
                 sx={{ 
                   width: 40, 
                   height: 40, 
-                  bgcolor: 'white',
-                  color: 'primary.main',
+                  color: 'black',
+                  bgcolor: 'inherit',
                   cursor: 'pointer',
                   '&:hover': {
-                    bgcolor: 'primary.dark',
-                    color: 'white'
+                    color: 'primary.dark',
+                    bgcolor: 'white'
                   }
                 }}
                 onClick={() => navigate('/profile')}
@@ -70,10 +70,10 @@ export function Navbar() {
           </>
         ) : (
           <>
-            <Button color="inherit" onClick={() => navigate('/enroll')} sx={{ color: 'text.primary', mr: 2, fontWeight: 600 }}>
+            <Button color="inherit" onClick={() => navigate('/enroll')} sx={{ color: 'text.primary', mr: 2, fontWeight: 600, '&:hover': { bgcolor: '#fff', color: 'primary.dark', cursor: 'pointer' } }}>
               Enroll
             </Button>
-            <Button color="inherit" onClick={() => navigate('/login')} sx={{ color: 'error.main', fontWeight: 600 }}>
+            <Button color="inherit" onClick={() => navigate('/login')} sx={{ color: 'error.main', fontWeight: 600, '&:hover': { bgcolor: '#fff', color: 'primary.dark', cursor: 'pointer' } }}>
               Login
             </Button>
           </>
