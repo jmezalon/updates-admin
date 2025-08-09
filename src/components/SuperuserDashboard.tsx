@@ -139,6 +139,11 @@ export function SuperuserDashboard() {
       return;
     }
 
+    if (!newAdminEmail.includes('@')) {
+      setError('Email must contain an @ symbol');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch(`${BASE_URL}/auth/register`, {
@@ -516,7 +521,7 @@ export function SuperuserDashboard() {
           <TextField
             fullWidth
             label="Password"
-            type="password"
+            type="text"
             value={newAdminPassword}
             onChange={(e) => setNewAdminPassword(e.target.value)}
             margin="normal"
