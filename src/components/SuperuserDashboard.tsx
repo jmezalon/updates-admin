@@ -521,7 +521,7 @@ export function SuperuserDashboard() {
           <TextField
             fullWidth
             label="Password"
-            type="text"
+            type="password"
             value={newAdminPassword}
             onChange={(e) => setNewAdminPassword(e.target.value)}
             margin="normal"
