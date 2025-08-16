@@ -109,7 +109,7 @@ export function SuperuserDashboard() {
 
   const loadData = async () => {
     setLoading(true);
-    setError(''); // Clear any existing errors
+    setError('');
     try {
       // Load users
       const usersResponse = await fetch(`${BASE_URL}/users`, {
@@ -133,9 +133,7 @@ export function SuperuserDashboard() {
         throw new Error('Failed to load churches');
       }
     } catch (err) {
-      console.error('Error loading data:', err);
       setError('Failed to load data. Please refresh the page.');
-      // Don't clear existing data on error to prevent white screen
     }
     setLoading(false);
   };
@@ -192,7 +190,7 @@ export function SuperuserDashboard() {
     }
 
     setLoading(true);
-    setError(''); // Clear any existing errors
+    setError('');
     try {
       const response = await fetch(`${BASE_URL}/users/${selectedUserId}/assign-church`, {
         method: 'POST',
@@ -205,37 +203,39 @@ export function SuperuserDashboard() {
 
       if (response.ok) {
         setSuccess('User assigned to church successfully!');
+        
+        // Close dialog first to prevent mobile rendering issues
         setAssignDialogOpen(false);
         setSelectedUserId(null);
         setSelectedChurchId(null);
         
-        // Refresh data without setting loading to true again to prevent UI flicker
-        try {
-          const usersResponse = await fetch(`${BASE_URL}/users`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-          });
-          if (usersResponse.ok) {
-            const usersData = await usersResponse.json();
-            setUsers(usersData);
-          }
+        // Use setTimeout to ensure dialog is fully closed before data refresh on mobile
+        setTimeout(async () => {
+          try {
+            const usersResponse = await fetch(`${BASE_URL}/users`, {
+              headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (usersResponse.ok) {
+              const usersData = await usersResponse.json();
+              setUsers(usersData);
+            }
 
-          const churchesResponse = await fetch(`${BASE_URL}/churches`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-          });
-          if (churchesResponse.ok) {
-            const churchesData = await churchesResponse.json();
-            setChurches(churchesData);
+            const churchesResponse = await fetch(`${BASE_URL}/churches`, {
+              headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (churchesResponse.ok) {
+              const churchesData = await churchesResponse.json();
+              setChurches(churchesData);
+            }
+          } catch (refreshErr) {
+            // Assignment was successful, ignore refresh errors
           }
-        } catch (refreshErr) {
-          console.error('Error refreshing data after assignment:', refreshErr);
-          // Don't show error to user, just log it - assignment was successful
-        }
+        }, 100);
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to assign user to church');
       }
     } catch (err) {
-      console.error('Error assigning user:', err);
       setError('Network error while assigning user');
     }
     setLoading(false);
@@ -590,7 +590,23 @@ export function SuperuserDashboard() {
       </Dialog>
 
       {/* Assign Admin Dialog */}
-      <Dialog open={assignDialogOpen} onClose={() => setAssignDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={assignDialogOpen} 
+        onClose={() => setAssignDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        disableScrollLock={true}
+        keepMounted={false}
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: { xs: 'flex-end', sm: 'center' }
+          },
+          '& .MuiDialog-paper': {
+            margin: { xs: 1, sm: 2 },
+            maxHeight: { xs: '90vh', sm: 'none' }
+          }
+        }}
+      >
         <DialogTitle>Assign Admin to Church</DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="normal">
