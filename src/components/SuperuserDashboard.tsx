@@ -109,6 +109,7 @@ export function SuperuserDashboard() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(''); // Clear any existing errors
     try {
       // Load users
       const usersResponse = await fetch(`${BASE_URL}/users`, {
@@ -117,6 +118,8 @@ export function SuperuserDashboard() {
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
         setUsers(usersData);
+      } else {
+        throw new Error('Failed to load users');
       }
 
       // Load churches
@@ -126,9 +129,13 @@ export function SuperuserDashboard() {
       if (churchesResponse.ok) {
         const churchesData = await churchesResponse.json();
         setChurches(churchesData);
+      } else {
+        throw new Error('Failed to load churches');
       }
     } catch (err) {
-      setError('Failed to load data');
+      console.error('Error loading data:', err);
+      setError('Failed to load data. Please refresh the page.');
+      // Don't clear existing data on error to prevent white screen
     }
     setLoading(false);
   };
@@ -185,6 +192,7 @@ export function SuperuserDashboard() {
     }
 
     setLoading(true);
+    setError(''); // Clear any existing errors
     try {
       const response = await fetch(`${BASE_URL}/users/${selectedUserId}/assign-church`, {
         method: 'POST',
@@ -200,12 +208,34 @@ export function SuperuserDashboard() {
         setAssignDialogOpen(false);
         setSelectedUserId(null);
         setSelectedChurchId(null);
-        loadData(); // Refresh the data
+        
+        // Refresh data without setting loading to true again to prevent UI flicker
+        try {
+          const usersResponse = await fetch(`${BASE_URL}/users`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+          if (usersResponse.ok) {
+            const usersData = await usersResponse.json();
+            setUsers(usersData);
+          }
+
+          const churchesResponse = await fetch(`${BASE_URL}/churches`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+          if (churchesResponse.ok) {
+            const churchesData = await churchesResponse.json();
+            setChurches(churchesData);
+          }
+        } catch (refreshErr) {
+          console.error('Error refreshing data after assignment:', refreshErr);
+          // Don't show error to user, just log it - assignment was successful
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to assign user to church');
       }
     } catch (err) {
+      console.error('Error assigning user:', err);
       setError('Network error while assigning user');
     }
     setLoading(false);
@@ -273,6 +303,18 @@ export function SuperuserDashboard() {
       user.churchAssignments && user.churchAssignments.length > 0
     );
   };
+
+  // Show loading spinner during initial load only
+  if (loading && users.length === 0 && churches.length === 0) {
+    return (
+      <Box sx={{ width: '100vw', minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
+        <Navbar />
+        <Box sx={{ pt: 10, width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <Typography variant="h6">Loading dashboard...</Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ width: '100vw', minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
