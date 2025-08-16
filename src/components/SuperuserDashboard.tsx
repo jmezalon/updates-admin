@@ -596,14 +596,11 @@ export function SuperuserDashboard() {
         maxWidth="sm" 
         fullWidth
         disableScrollLock={true}
-        keepMounted={false}
         sx={{
-          '& .MuiDialog-container': {
-            alignItems: { xs: 'flex-end', sm: 'center' }
-          },
           '& .MuiDialog-paper': {
-            margin: { xs: 1, sm: 2 },
-            maxHeight: { xs: '90vh', sm: 'none' }
+            margin: { xs: '16px', sm: '32px' },
+            maxHeight: { xs: 'calc(100vh - 32px)', sm: 'calc(100vh - 64px)' },
+            width: { xs: 'calc(100vw - 32px)', sm: 'auto' }
           }
         }}
       >
