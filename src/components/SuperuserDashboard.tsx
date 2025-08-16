@@ -203,34 +203,10 @@ export function SuperuserDashboard() {
 
       if (response.ok) {
         setSuccess('User assigned to church successfully!');
-        
-        // Close dialog first to prevent mobile rendering issues
         setAssignDialogOpen(false);
         setSelectedUserId(null);
         setSelectedChurchId(null);
-        
-        // Use setTimeout to ensure dialog is fully closed before data refresh on mobile
-        setTimeout(async () => {
-          try {
-            const usersResponse = await fetch(`${BASE_URL}/users`, {
-              headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-            if (usersResponse.ok) {
-              const usersData = await usersResponse.json();
-              setUsers(usersData);
-            }
-
-            const churchesResponse = await fetch(`${BASE_URL}/churches`, {
-              headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-            if (churchesResponse.ok) {
-              const churchesData = await churchesResponse.json();
-              setChurches(churchesData);
-            }
-          } catch (refreshErr) {
-            // Assignment was successful, ignore refresh errors
-          }
-        }, 100);
+        loadData();
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to assign user to church');
@@ -590,20 +566,7 @@ export function SuperuserDashboard() {
       </Dialog>
 
       {/* Assign Admin Dialog */}
-      <Dialog 
-        open={assignDialogOpen} 
-        onClose={() => setAssignDialogOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        disableScrollLock={true}
-        sx={{
-          '& .MuiDialog-paper': {
-            margin: { xs: '16px', sm: '32px' },
-            maxHeight: { xs: 'calc(100vh - 32px)', sm: 'calc(100vh - 64px)' },
-            width: { xs: 'calc(100vw - 32px)', sm: 'auto' }
-          }
-        }}
-      >
+      <Dialog open={assignDialogOpen} onClose={() => setAssignDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Assign Admin to Church</DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="normal">
