@@ -10,6 +10,7 @@ import { EnrollPage } from './pages/EnrollPage';
 import { Dashboard } from './pages/Dashboard';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { theme } from './theme/theme';
 
 function App() {
@@ -54,6 +55,7 @@ function App() {
                 <ResetPassword />
               </PublicRoute>
             } />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           </Routes>
         </Router>
       </AuthProvider>
